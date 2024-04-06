@@ -39,12 +39,23 @@ def stream_data():
             for record in table.records:
                 # do not append if sensor name is npm_test
                 if record.get_measurement() != "npm_test":
-                    data.append({
-                        "_time": record.get_time().strftime('%Y-%m-%dT%H:%M:%SZ'),  # Convert datetime to string
-                        "_value": record.get_value(),
-                        "_field": record.get_field(),
-                        "_measurement": record.get_measurement()
-                    })
+                    # implement data validation here
+                    if(record.get_value() < 0 ):
+                        data.append({
+                            "_time": record.get_time().strftime('%Y-%m-%dT%H:%M:%SZ'),  # Convert datetime to string
+                            "_value": record.get_value(),
+                            "_field": record.get_field(),
+                            "_measurement": record.get_measurement(),
+                            "_conformity": "invalid"  # Add a conformity field to indicate data validation status
+                        })
+                    else:
+                        data.append({
+                            "_time": record.get_time().strftime('%Y-%m-%dT%H:%M:%SZ'),  # Convert datetime to string
+                            "_value": record.get_value(),
+                            "_field": record.get_field(),
+                            "_measurement": record.get_measurement(),
+                            "_conformity": "valid"  # Add a conformity field to indicate data validation status
+                        })
         yield "data: {}\n\n".format(json.dumps(data))
         time.sleep(0.1)  # Adjust the sleep time as needed
 

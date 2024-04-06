@@ -27,7 +27,7 @@ Before proceeding, ensure the following prerequisites are met:
 
 ### Step 2: Run the Node.js API Server
 
-This application requires an InfluxDB instance to work. Make sure you deploy one has shown [here](../infra/DEPLOY.md). Once you got all InfluxDB creditentials information rename the `.env` file as follows:
+This application requires an InfluxDB instance to work. Make sure you deploy one has shown [here](../infrastructure/README.md). Once you got all InfluxDB creditentials information rename the `.env` file as follows:
 
 ```bash
 cp .env.example .env

@@ -37,13 +37,11 @@ kubectl wait --for=condition=Ready pod influx-stateful-deployment-0 --namespace 
 
 # Get pods and services
 Write-Host "`nGetting pods and services...`n"
-kubectl get pods
+kubectl get pods -n ppe
 kubectl get services -n ppe
-kubectl get services -n istio-system
-
 
 Start-Sleep -Seconds 20
 
 # Access InfluxDB service
 Write-Host "`nAccessing InfluxDB service...`n"
-minikube service influx-access-service
+minikube service -n ppe influx-access-service
