@@ -27,7 +27,7 @@ Use Stop/Restart to reconnect.
 
 Process ended with exit code 1."
 
-Don't worry, you can erase flash memory of Pico W by putting "flash_nuke.uf2" in BOOTSEL mode. After that, reinstall MicroPython.
+Don't worry, you can erase flash memory of Pico W by putting /Rhythmic-Ranker//electronics/flash_nuke.uf2 in your device in BOOTSEL mode. After that, reinstall MicroPython.
 
 You will lose all your data in the device so don't forget to save your work !
 
