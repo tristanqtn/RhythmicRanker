@@ -28,16 +28,22 @@ data = {
 
 json_data = None
 
+wlan = None
+
+
 def connect():
     #Connect to WLAN
+    
+    global wlan
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
     wlan.connect(ssid, password)
-    while wlan.isconnected() == False:
-        print('Waiting for connection...')
+    while wlan.status == 1:
+        print('Waiting for connection...' + str(wlan.status()))
         sleep(1)
     print("connected")
     print(wlan.ifconfig())
+  
 
 try:
     connect()
@@ -79,5 +85,6 @@ try:
         sleep(2)
 
 except KeyboardInterrupt:
-    machine.reset()
+    wlan.disconnect()
+    print('bye')
     
