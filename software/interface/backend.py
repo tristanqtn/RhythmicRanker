@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 import json
 import time
 
+GRAB_TRHESHOLD = 30000
+
 app = Flask(__name__)
 app.start_time = time.time()
 
@@ -31,33 +33,105 @@ def stream_data():
     Returns:
         str: Server-sent events (SSE) containing the streamed data.
     """
-    query = 'from(bucket: "{}") |> range(start: -1h)'.format(os.getenv("INFLUX_BUCKET"))
+    all_query = 'from(bucket: "{}") |> range(start: -1h)'.format(os.getenv("INFLUX_BUCKET"))
+    
+    
+    az_query = f'''
+    from(bucket: "{os.getenv("INFLUX_BUCKET")}")
+    |> range(start: -1h)
+    |> filter(fn: (r) => r["_measurement"] == "az")
+    |> sort(columns: ["_time"], desc: true)
+    |> limit(n:2)
+    '''
+
+    grab_query = f'''
+    from(bucket: "{os.getenv("INFLUX_BUCKET")}")
+    |> range(start: -1h)  
+    |> filter(fn: (r) => r["_measurement"] == "force_value")
+    |> last()
+    '''
+    mean_z_query = f'''
+    from(bucket: "{os.getenv("INFLUX_BUCKET")}")
+    |> range(start: -10s)
+    |> filter(fn: (r) => r["_measurement"] == "az")
+    |> mean(column: "_value")
+    '''
+
     while True:
-        tables = query_api.query(query)
+        
         data = []
-        for table in tables:
+
+        az_tables = query_api.query(az_query)
+        grab_data = query_api.query(grab_query)
+        mean_z = query_api.query(mean_z_query)
+
+        time = az_tables[0].records[0].get_time()-az_tables[0].records[1].get_time()        
+
+        instant_height = compute_height(mean_z[0].records[0].get_value(), abs(az_tables[0].records[0].get_value()-az_tables[0].records[1].get_value()), time.total_seconds()) 
+
+        data.append({
+                        "_time": az_tables[0].records[0].get_time().strftime('%Y-%m-%dT%H:%M:%SZ'),  # Convert datetime to string
+                        "_value": -instant_height,
+                        "_field": "Hauteur",
+                        "_measurement": "Hauteur (cm)",
+                        "_conformity": ""  # Add a conformity field to indicate data validation status
+        })
+
+        for table in grab_data:
+            for record in table.records:
+                if(record.get_value() > GRAB_TRHESHOLD):   
+                    data.append({
+                        "_time": record.get_time().strftime('%Y-%m-%dT%H:%M:%SZ'),  # Convert datetime to string
+                        "_value": record.get_value(),
+                        "_field": record.get_field(),
+                        "_measurement": "Préhension",
+                        "_conformity": "En main"  # Add a conformity field to indicate data validation status
+                    })
+                else:
+                    data.append({
+                        "_time": record.get_time().strftime('%Y-%m-%dT%H:%M:%SZ'),  # Convert datetime to string
+                        "_value": record.get_value(),
+                        "_field": record.get_field(),
+                        "_measurement": "Préhension",
+                        "_conformity": "Laché"  # Add a conformity field to indicate data validation status
+                    })
+
+        all_data  = query_api.query(all_query)
+
+        for table in all_data:
             for record in table.records:
                 # do not append if sensor name is npm_test
-                if record.get_measurement() != "npm_test":
+                if (record.get_measurement() != "npm_test" and record.get_measurement() != "force_value"):
                     # implement data validation here
-                    if(record.get_value() < 0 ):
-                        data.append({
-                            "_time": record.get_time().strftime('%Y-%m-%dT%H:%M:%SZ'),  # Convert datetime to string
-                            "_value": record.get_value(),
-                            "_field": record.get_field(),
-                            "_measurement": record.get_measurement(),
-                            "_conformity": "invalid"  # Add a conformity field to indicate data validation status
-                        })
-                    else:
-                        data.append({
-                            "_time": record.get_time().strftime('%Y-%m-%dT%H:%M:%SZ'),  # Convert datetime to string
-                            "_value": record.get_value(),
-                            "_field": record.get_field(),
-                            "_measurement": record.get_measurement(),
-                            "_conformity": "valid"  # Add a conformity field to indicate data validation status
-                        })
+                    data.append({
+                        "_time": record.get_time().strftime('%Y-%m-%dT%H:%M:%SZ'),  # Convert datetime to string
+                        "_value": record.get_value(),
+                        "_field": record.get_field(),
+                        "_measurement": record.get_measurement(),
+                        "_conformity": ""  # Add a conformity field to indicate data validation status
+                    })
+
         yield "data: {}\n\n".format(json.dumps(data))
-        time.sleep(0.1)  # Adjust the sleep time as needed
+        #time.sleep(0.1)  # Adjust the sleep time as needed
+
+
+def compute_height(v_z0, a_z, time):
+    """
+    Computes the height of an object given initial velocity in the z direction,
+    acceleration in the z direction, and the time elapsed.
+
+    Parameters:
+    - v_z0: Initial velocity in the z direction (m/s)
+    - a_z: Acceleration in the z direction (m/s^2). Note: Include gravity here if not included in initial acceleration.
+    - time: Time since the start (seconds)
+
+    Returns:
+    - Height of the object at the given time.
+    """
+    g = 9.81  # Acceleration due to gravity (m/s^2), positive downwards
+    height = v_z0 * time **2 + 0.5 * (a_z - g) * time ** 2  # Assuming upwards is positive, subtract gravity from acceleration
+    return height
+
 
 # API endpoint to stream data
 @app.route('/api/stream')
@@ -142,8 +216,8 @@ def api_health():
         Response: JSON response containing the health status.
     """
      # Load IP and port from environment variables
-    ip = os.getenv('DATA_INPUT_API_IP')
-    port = os.getenv('DATA_INPUT_API_PORT')
+    ip = os.getenv('INTERNAL_INPUT_API_IP')
+    port = os.getenv('INTERNAL_INPUT_API_PORT')
 
     # Construct the target URL
     target_url = f'http://{ip}:{port}/health/influx'

@@ -191,7 +191,12 @@
 
           const uptimeSpan = document.createElement("span");
           uptimeSpan.className = "health-check-uptime";
-          uptimeSpan.textContent = `Disponibilité: ${uptime}`;
+          let minutes = Math.floor(uptime / 60);
+          let seconds = uptime % 60;
+
+          uptimeSpan.textContent = `Disponibilité: ${minutes}min ${seconds.toFixed(
+            2
+          )}s`;
 
           healthCheckItemDiv.appendChild(statusSpan);
           healthCheckItemDiv.appendChild(nameSpan);

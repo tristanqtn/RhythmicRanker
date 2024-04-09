@@ -21,6 +21,17 @@ Write-Host "`nINFLIXDB CLUSTER SHOULD BE CONFIGURED BEFORE MOVING ON !`n"
 pause
 
 # Deploy API endpoint in separate console window
+Write-Host "`nDeploying broker endpoint..."
+$brokerPath = Join-Path -Path $PSScriptRoot -ChildPath "broker"
+try{
+    Start-Process powershell.exe -ArgumentList "-NoExit", "-Command", "& { Set-Location $brokerPath; poetry install; python broker.py; }"
+    Start-Sleep -Seconds 5
+}
+catch {
+    Write-Error "Failed to start broker endpoint: $_"
+}
+
+# Deploy API endpoint in separate console window
 Write-Host "`nDeploying api endpoint..."
 $apiPath = Join-Path -Path $PSScriptRoot -ChildPath "api"
 try{

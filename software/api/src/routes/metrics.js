@@ -37,6 +37,7 @@ metrics
    * @returns {Error}  400 error - insertion failed
    */
   .post("/", (req, resp) => {
+    console.log(`Received: ${JSON.stringify(req.body)}`);
     const point1 = new Point(req.body.sensor).intField(
       "measurement",
       req.body.measurement

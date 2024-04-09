@@ -9,8 +9,8 @@ const dotenv = require("dotenv");
 const envPath = path.resolve(__dirname, "..", "..", ".env");
 dotenv.config({ path: envPath });
 
-const port = process.env.DATA_INPUT_API_PORT;
-const IP = process.env.DATA_INPUT_API_IP;
+const port = process.env.INTERNAL_INPUT_API_PORT;
+const IP = process.env.INTERNAL_INPUT_API_IP;
 
 let options = {
   swaggerDefinition: {
