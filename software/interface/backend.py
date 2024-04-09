@@ -57,6 +57,13 @@ def stream_data():
     |> mean(column: "_value")
     '''
 
+    az_records_query = f'''
+    from(bucket: "{os.getenv("INFLUX_BUCKET")}")
+    |> range(start: -10s)
+    |> filter(fn: (r) => r._measurement == "az")
+    |> count()
+    '''
+
     while True:
         
         data = []
@@ -64,18 +71,22 @@ def stream_data():
         az_tables = query_api.query(az_query)
         grab_data = query_api.query(grab_query)
         mean_z = query_api.query(mean_z_query)
+        az_counter = query_api.query(az_records_query)
 
-        time = az_tables[0].records[0].get_time()-az_tables[0].records[1].get_time()        
 
-        instant_height = compute_height(mean_z[0].records[0].get_value(), abs(az_tables[0].records[0].get_value()-az_tables[0].records[1].get_value()), time.total_seconds()) 
+        if(az_counter[0].records[0].get_value() >= 2):
 
-        data.append({
-                        "_time": az_tables[0].records[0].get_time().strftime('%Y-%m-%dT%H:%M:%SZ'),  # Convert datetime to string
-                        "_value": -instant_height,
-                        "_field": "Hauteur",
-                        "_measurement": "Hauteur (cm)",
-                        "_conformity": ""  # Add a conformity field to indicate data validation status
-        })
+            time = az_tables[0].records[0].get_time()-az_tables[0].records[1].get_time()        
+
+            instant_height = compute_height(mean_z[0].records[0].get_value(), abs(az_tables[0].records[0].get_value()-az_tables[0].records[1].get_value()), time.total_seconds()) 
+
+            data.append({
+                            "_time": az_tables[0].records[0].get_time().strftime('%Y-%m-%dT%H:%M:%SZ'),  # Convert datetime to string
+                            "_value": -instant_height,
+                            "_field": "Hauteur",
+                            "_measurement": "Hauteur (cm)",
+                            "_conformity": ""  # Add a conformity field to indicate data validation status
+            })
 
         for table in grab_data:
             for record in table.records:
